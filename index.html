@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Employee Database Management System</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f2f4f8; margin: 0; }
+  h1 { background: #1f3a68; color: white; margin: 0; padding: 16px 24px; font-size: 22px; }
+  .box { background: white; max-width: 950px; margin: 16px auto; padding: 16px; border-radius: 6px; }
+  input { padding: 8px; margin: 4px; }
+  button { padding: 8px 14px; background: #1f3a68; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px; border-bottom: 1px solid #ddd; text-align: left; }
+  th { background: #e8ecf4; }
+  #msg { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Employee Database Management System</h1>
+
+<div class="box">
+  <h3 id="title">Add Employee</h3>
+  <input id="id" type="number" placeholder="Employee ID">
+  <input id="name" placeholder="Name">
+  <input id="desig" placeholder="Designation">
+  <input id="dept" placeholder="Department">
+  <input id="salary" type="number" placeholder="Salary">
+  <br>
+  <button id="saveBtn" onclick="saveEmp()">Add Employee</button>
+  <button onclick="clearForm()">Clear</button>
+  <p id="msg"></p>
+</div>
+
+<div class="box">
+  <h3>Search</h3>
+  <input id="sid" type="number" placeholder="Employee ID">
+  <button onclick="show('/api/search?id=' + $('sid').value)">Search by ID</button>
+  <input id="sdept" placeholder="Department (e.g. CSE)">
+  <button onclick="show('/api/department?name=' + encodeURIComponent($('sdept').value))">Search by Department</button>
+  <button onclick="show('/api/all')">Show All</button>
+</div>
+
+<div class="box">
+  <table>
+    <tr><th>ID</th><th>Name</th><th>Designation</th><th>Department</th><th>Salary</th><th>Actions</th></tr>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<script>
+  // JavaScript only sends requests to the C++ server and shows the replies.
+  // All the data handling and saving is done in server.cpp.
+  var editing = false;
+  function $(x) { return document.getElementById(x); }
+
+  function safe(t) {                       // stops odd characters from breaking the table
+    var d = document.createElement("div");
+    d.textContent = t;
+    return d.innerHTML;
+  }
+
+  function show(url) {                     // ask the server for employees and fill the table
+    fetch(url).then(r => r.json()).then(function (list) {
+      var html = "";
+      list.forEach(function (e) {
+        html += "<tr><td>" + e.id + "</td><td>" + safe(e.name) + "</td><td>" + safe(e.designation) +
+          "</td><td>" + safe(e.department) + "</td><td>" + e.salary.toFixed(2) + "</td><td>" +
+          "<button onclick='editEmp(" + e.id + ")'>Edit</button> " +
+          "<button onclick='delEmp(" + e.id + ")'>Delete</button></td></tr>";
+      });
+      $("rows").innerHTML = html || "<tr><td colspan='6'>No employees found</td></tr>";
+    });
+  }
+
+  function send(url, data) {               // POST to the server and return its reply
+    return fetch(url, { method: "POST", body: new URLSearchParams(data) }).then(r => r.json());
+  }
+
+  function report(res) {
+    $("msg").textContent = res.message;
+    $("msg").style.color = res.ok ? "green" : "red";
+    if (res.ok) { clearForm(); show("/api/all"); }
+  }
+
+  function saveEmp() {
+    send(editing ? "/api/update" : "/api/add", {
+      id: $("id").value, name: $("name").value, designation: $("desig").value,
+      department: $("dept").value, salary: $("salary").value
+    }).then(report);
+  }
+
+  function editEmp(id) {                   // fill the form with the employee's details
+    fetch("/api/search?id=" + id).then(r => r.json()).then(function (list) {
+      var e = list[0];
+      $("id").value = e.id;
+      $("id").readOnly = true;             // id cannot change while updating
+      $("name").value = e.name;
+      $("desig").value = e.designation;
+      $("dept").value = e.department;
+      $("salary").value = e.salary;
+      $("title").textContent = "Update Employee";
+      $("saveBtn").textContent = "Update Employee";
+      editing = true;
+      window.scrollTo(0, 0);
+    });
+  }
+
+  function delEmp(id) {
+    if (confirm("Delete employee " + id + "?")) send("/api/delete", { id: id }).then(report);
+  }
+
+  function clearForm() {
+    ["id", "name", "desig", "dept", "salary"].forEach(function (x) { $(x).value = ""; });
+    $("id").readOnly = false;
+    $("title").textContent = "Add Employee";
+    $("saveBtn").textContent = "Add Employee";
+    editing = false;
+  }
+
+  show("/api/all");
+</script>
+</body>
+</html>

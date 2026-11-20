@@ -1,0 +1,6 @@
+101|Rahul Sharma|Assistant Professor|CSE|52000
+102|Priya Deshmukh|Professor|CSE|78000
+103|Amit Kulkarni|Lab Assistant|ECE|28000
+104|Sneha Patil|Associate Professor|MECH|64000
+105|Vikram Joshi|Lecturer|CSE|45000
+106|Neha Verma|Accountant|ADMIN|36000
